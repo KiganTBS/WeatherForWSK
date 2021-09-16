@@ -1,3 +1,4 @@
+
 package com.example.weather;
 
 import androidx.appcompat.app.ActionBar;
@@ -25,10 +26,13 @@ import java.net.MalformedURLException;
 import java.net.URL;
 
 
+
 public class MainActivity extends AppCompatActivity {
     private EditText editTextCity;
     private TextView textViewWeather;
     private ImageView imageView;
+
+    private String geoCity;
     private final String WEATHER_URL = "http://api.openweathermap.org/data/2.5/weather?q=%s&appid=bccdc8e3ead5089280397b80715a5cd7&lang=ru&units=metric";
 
     @Override
@@ -41,12 +45,13 @@ public class MainActivity extends AppCompatActivity {
         textViewWeather = findViewById(R.id.textViewWeather);
         imageView = findViewById(R.id.imageView);
 
+
     }
 
     public void onClickShowWeather(View view) {
         String city = editTextCity.getText().toString().trim();
         if (!city.isEmpty()) {
-
+            Toast.makeText(this, "geo", Toast.LENGTH_SHORT).show();
             DownloadWeatherTask task = new DownloadWeatherTask();
             String url = String.format(WEATHER_URL, city);
             task.execute(url);
