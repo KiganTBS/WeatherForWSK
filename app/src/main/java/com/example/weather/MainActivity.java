@@ -42,7 +42,7 @@ import java.util.Locale;
 
 public class MainActivity extends AppCompatActivity {
     private EditText editTextCity;
-    private TextView textViewWeather,textView;
+    private TextView textViewWeather;
     private ImageView imageView;
     FusedLocationProviderClient fusedLocationProviderClient;
     String innerCity;
@@ -57,7 +57,6 @@ public class MainActivity extends AppCompatActivity {
         if (actionBar != null) actionBar.hide();
         editTextCity = findViewById(R.id.editTextCity);
         textViewWeather = findViewById(R.id.textViewWeather);
-        textView = findViewById(R.id.textView);
         imageView = findViewById(R.id.imageView);
     }
 
@@ -65,9 +64,7 @@ public class MainActivity extends AppCompatActivity {
     public void onClickShowWeather(View view) {
         String city = editTextCity.getText().toString().trim();
         if (!city.isEmpty()) {
-            DownloadWeatherTask task = new DownloadWeatherTask();
-            String url = String.format(WEATHER_URL, city);
-            task.execute(url);
+            getGeo(city);
         }
     }
 
@@ -75,11 +72,16 @@ public class MainActivity extends AppCompatActivity {
         fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
         if (ActivityCompat.checkSelfPermission(MainActivity.this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
             innerCity = getLocation();
-        } else{
+            getGeo(innerCity);
+        } else {
             ActivityCompat.requestPermissions(MainActivity.this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 44);
         }
+
+    }
+
+    private void getGeo(String city){
         DownloadWeatherTask task = new DownloadWeatherTask();
-        String url = String.format(WEATHER_URL, innerCity);
+        String url = String.format(WEATHER_URL, city);
         task.execute(url);
     }
 
@@ -96,14 +98,11 @@ public class MainActivity extends AppCompatActivity {
                                 location.getLatitude(), location.getLongitude(), 1
                         );
                         innerCity = addresses.get(0).getLocality();
-                        textView.setText(addresses.get(0).getLocality());
 
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
                 }
-
-
             }
         });
         return innerCity;
@@ -127,8 +126,6 @@ public class MainActivity extends AppCompatActivity {
                     line = reader.readLine();
                 }
                 return result.toString();
-            } catch (MalformedURLException e) {
-                e.printStackTrace();
             } catch (IOException e) {
                 e.printStackTrace();
             } finally {
