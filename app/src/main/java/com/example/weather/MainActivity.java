@@ -1,9 +1,17 @@
-
 package com.example.weather;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
 
+import android.Manifest;
+import android.annotation.SuppressLint;
+import android.content.pm.PackageManager;
+import android.location.Address;
+import android.location.Geocoder;
+import android.location.Location;
+import android.media.MediaPlayer;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.view.View;
@@ -12,6 +20,10 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.tasks.OnCompleteListener;
+import com.google.android.gms.tasks.Task;
 import com.squareup.picasso.Picasso;
 
 import org.json.JSONException;
@@ -24,15 +36,17 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
-
+import java.util.List;
+import java.util.Locale;
 
 
 public class MainActivity extends AppCompatActivity {
     private EditText editTextCity;
-    private TextView textViewWeather;
+    private TextView textViewWeather,textView;
     private ImageView imageView;
+    FusedLocationProviderClient fusedLocationProviderClient;
+    String innerCity;
 
-    private String geoCity;
     private final String WEATHER_URL = "http://api.openweathermap.org/data/2.5/weather?q=%s&appid=bccdc8e3ead5089280397b80715a5cd7&lang=ru&units=metric";
 
     @Override
@@ -43,19 +57,56 @@ public class MainActivity extends AppCompatActivity {
         if (actionBar != null) actionBar.hide();
         editTextCity = findViewById(R.id.editTextCity);
         textViewWeather = findViewById(R.id.textViewWeather);
+        textView = findViewById(R.id.textView);
         imageView = findViewById(R.id.imageView);
-
-
     }
+
 
     public void onClickShowWeather(View view) {
         String city = editTextCity.getText().toString().trim();
         if (!city.isEmpty()) {
-            Toast.makeText(this, "geo", Toast.LENGTH_SHORT).show();
             DownloadWeatherTask task = new DownloadWeatherTask();
             String url = String.format(WEATHER_URL, city);
             task.execute(url);
         }
+    }
+
+    public void CheckGeo(View view) {
+        fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
+        if (ActivityCompat.checkSelfPermission(MainActivity.this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+            innerCity = getLocation();
+        } else{
+            ActivityCompat.requestPermissions(MainActivity.this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 44);
+        }
+        DownloadWeatherTask task = new DownloadWeatherTask();
+        String url = String.format(WEATHER_URL, innerCity);
+        task.execute(url);
+    }
+
+    @SuppressLint("MissingPermission")
+    private String getLocation() {
+        fusedLocationProviderClient.getLastLocation().addOnCompleteListener(new OnCompleteListener<Location>() {
+            @Override
+            public void onComplete(@NonNull Task<Location> task) {
+                Location location = task.getResult();
+                if (location != null) {
+                    try {
+                        Geocoder geocoder = new Geocoder(MainActivity.this, Locale.getDefault());
+                        List<Address> addresses = geocoder.getFromLocation(
+                                location.getLatitude(), location.getLongitude(), 1
+                        );
+                        innerCity = addresses.get(0).getLocality();
+                        textView.setText(addresses.get(0).getLocality());
+
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+
+
+            }
+        });
+        return innerCity;
     }
 
     private class DownloadWeatherTask extends AsyncTask<String, Void, String> {
