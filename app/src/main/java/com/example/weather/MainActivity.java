@@ -5,13 +5,16 @@ import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 
+
 import android.Manifest;
 import android.annotation.SuppressLint;
+import android.content.Context;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.location.Address;
 import android.location.Geocoder;
 import android.location.Location;
-import android.media.MediaPlayer;
+import android.location.LocationManager;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.view.View;
@@ -34,7 +37,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.List;
 import java.util.Locale;
@@ -63,18 +65,18 @@ public class MainActivity extends AppCompatActivity {
 
     public void onClickShowWeather(View view) {
         String city = editTextCity.getText().toString().trim();
-        if (!city.isEmpty()) {
-            getGeo(city);
-        }
+        if (!city.isEmpty())  getGeo(city);
     }
 
     public void CheckGeo(View view) {
         fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
-        if (ActivityCompat.checkSelfPermission(MainActivity.this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-            innerCity = getLocation();
-            getGeo(innerCity);
+        if (ActivityCompat.checkSelfPermission(MainActivity.this
+                , Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+
+            getGeo(getLocation());
         } else {
-            ActivityCompat.requestPermissions(MainActivity.this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 44);
+            ActivityCompat.requestPermissions(MainActivity.this
+                    , new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 44);
         }
 
     }
@@ -87,28 +89,31 @@ public class MainActivity extends AppCompatActivity {
 
     @SuppressLint("MissingPermission")
     private String getLocation() {
-        fusedLocationProviderClient.getLastLocation().addOnCompleteListener(new OnCompleteListener<Location>() {
-            @Override
-            public void onComplete(@NonNull Task<Location> task) {
-                Location location = task.getResult();
-                if (location != null) {
-                    try {
-                        Geocoder geocoder = new Geocoder(MainActivity.this, Locale.getDefault());
-                        List<Address> addresses = geocoder.getFromLocation(
-                                location.getLatitude(), location.getLongitude(), 1
-                        );
-                        innerCity = addresses.get(0).getLocality();
+        if (!isGeoDisabled()) {
+            fusedLocationProviderClient.getLastLocation().addOnCompleteListener(new OnCompleteListener<Location>() {
+                @Override
+                public void onComplete(@NonNull Task<Location> task) {
+                    Location location = task.getResult();
+                    if (location != null) {
+                        try {
+                            Geocoder geocoder = new Geocoder(MainActivity.this, Locale.getDefault());
+                            List<Address> addresses = geocoder.getFromLocation(
+                                    location.getLatitude(), location.getLongitude(), 1
+                            );
+                            innerCity = addresses.get(0).getLocality();
 
-                    } catch (IOException e) {
-                        e.printStackTrace();
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
                     }
                 }
-            }
-        });
-        return innerCity;
+            });
+            return innerCity;
+        } else startActivity(new Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS));
+        return null;
     }
 
-    private class DownloadWeatherTask extends AsyncTask<String, Void, String> {
+        private class DownloadWeatherTask extends AsyncTask<String, Void, String> {
         @Override
         protected String doInBackground(String... strings) {
             URL url = null;
@@ -162,5 +167,13 @@ public class MainActivity extends AppCompatActivity {
                 Toast.makeText(getApplicationContext(), R.string.excepton_city, Toast.LENGTH_SHORT).show();
             }
         }
+    }
+
+    public boolean isGeoDisabled() {
+        LocationManager mLocationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+        boolean mIsGPSEnabled = mLocationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
+        boolean mIsNetworkEnabled = mLocationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
+        boolean mIsGeoDisabled = !mIsGPSEnabled && !mIsNetworkEnabled;
+        return mIsGeoDisabled;
     }
 }
